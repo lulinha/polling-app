@@ -1,0 +1,17 @@
+启动 Kafka：
+
+下载并解压 Kafka。
+
+启动 Zookeeper 和 Kafka 服务：
+
+```bash
+bin\windows\zookeeper-server-start.bat config/zookeeper.properties
+bin\windows\kafka-server-start.bat config/server.properties
+```
+
+创建主题：
+```bash
+bin\windows\kafka-topics.bat --create --topic user-registered --bootstrap-server localhost:9092
+bin\windows\kafka-topics.bat --create --topic poll-created --bootstrap-server localhost:9092
+bin\windows\kafka-topics.bat --create --topic vote-casted --bootstrap-server localhost:9092
+```
