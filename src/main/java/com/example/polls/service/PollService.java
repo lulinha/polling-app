@@ -11,7 +11,6 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -20,7 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.polls.dto.PollDTO;
-import com.example.polls.dto.VoteDTO;
 import com.example.polls.exception.BadRequestException;
 import com.example.polls.exception.ResourceNotFoundException;
 import com.example.polls.model.Choice;
@@ -31,7 +29,6 @@ import com.example.polls.model.Vote;
 import com.example.polls.payload.PagedResponse;
 import com.example.polls.payload.PollRequest;
 import com.example.polls.payload.PollResponse;
-import com.example.polls.payload.VoteRequest;
 import com.example.polls.repository.PollRepository;
 import com.example.polls.repository.UserRepository;
 import com.example.polls.repository.VoteRepository;
@@ -183,9 +180,6 @@ public class PollService {
                 // 保存投票
                 Poll savedPoll = pollRepository.save(poll);
 
-                // 发送投票创建事件
-                // kafkaProducerService.sendPollCreatedEvent(savedPoll.getId());
-
                 // 使用持久化发送
                 PollDTO pollDTO = ModelMapper.convertToDTO(savedPoll);
                 String message = JsonUtils.toJson(pollDTO);
@@ -222,62 +216,13 @@ public class PollService {
                                 creator, userVote != null ? userVote.getChoice().getId() : null);
         }
 
-        public PollResponse castVoteAndGetUpdatedPoll(Long pollId, VoteRequest voteRequest, UserPrincipal currentUser) {
-                Poll poll = pollRepository.findById(pollId)
-                                .orElseThrow(() -> new ResourceNotFoundException(
-                                                "Poll with id" + pollId + " not found"));
+        public Poll updatePoll(Long pollId, PollRequest pollRequest) {
+                // 更新投票逻辑
+                return null;
+        }
 
-                if (poll.getExpirationDateTime().isBefore(Instant.now())) {
-                        throw new BadRequestException("Sorry! This Poll has already expired");
-                }
-
-                User user = userRepository.findById(currentUser.getId())
-                                .orElseThrow(() -> new ResourceNotFoundException(
-                                                "User with id " + currentUser.getId() + " not found"));
-
-                Choice selectedChoice = poll.getChoices().stream()
-                                .filter(choice -> choice.getId().equals(voteRequest.getChoiceId()))
-                                .findFirst()
-                                .orElseThrow(() -> new ResourceNotFoundException(
-                                                "Choice with id" + voteRequest.getChoiceId() + " not found"));
-
-                Vote vote = new Vote();
-                vote.setPoll(poll);
-                vote.setUser(user);
-                vote.setChoice(selectedChoice);
-
-                try {
-                        vote = voteRepository.save(vote);
-                        // 将投票信息转换为 DTO
-                        VoteDTO voteDTO = new VoteDTO();
-                        voteDTO.setId(vote.getId());
-                        voteDTO.setPollId(poll.getId());
-                        voteDTO.setChoiceId(selectedChoice.getId());
-                        voteDTO.setUserId(user.getId());
-                        // 发送投票提交事件
-                        // kafkaProducerService.sendVoteSubmittedEvent(vote.getId());
-                        // 将 DTO 转换为 JSON
-                        String message = JsonUtils.toJson(voteDTO);
-                        kafkaProducerService.sendWithPersistence("vote-casted", vote.getId().toString(), message);
-                } catch (DataIntegrityViolationException ex) {
-                        logger.info("User {} has already voted in Poll {}", currentUser.getId(), pollId);
-                        throw new BadRequestException("Sorry! You have already cast your vote in this poll");
-                }
-
-                // -- Vote Saved, Return the updated Poll Response now --
-
-                // Retrieve Vote Counts of every choice belonging to the current poll
-                List<ChoiceVoteCount> votes = voteRepository.countByPollIdGroupByChoiceId(pollId);
-
-                Map<Long, Long> choiceVotesMap = votes.stream()
-                                .collect(Collectors.toMap(ChoiceVoteCount::getChoiceId, ChoiceVoteCount::getVoteCount));
-
-                // Retrieve poll creator details
-                User creator = userRepository.findById(poll.getCreatedBy())
-                                .orElseThrow(() -> new ResourceNotFoundException(
-                                                "User with id" + poll.getCreatedBy() + " not found"));
-
-                return ModelMapper.mapPollToPollResponse(poll, choiceVotesMap, creator, vote.getChoice().getId());
+        public void deletePoll(Long pollId) {
+                // 删除投票逻辑
         }
 
         private void validatePageNumberAndSize(int page, int size) {

@@ -26,6 +26,17 @@ public class KafkaOutbox {
     private Instant sentAt;
     private int retryCount;
 
+    public KafkaOutbox() {
+    }
+
+    public KafkaOutbox(String topic, String messageKey, String messageBody) {
+        this.topic = topic;
+        this.messageKey = messageKey;
+        this.messageBody = messageBody;
+        this.status = "PENDING";
+        this.createdAt = Instant.now();
+    }
+
     public Long getId() {
         return id;
     }

@@ -25,6 +25,7 @@ import com.example.polls.payload.VoteRequest;
 import com.example.polls.security.CurrentUser;
 import com.example.polls.security.UserPrincipal;
 import com.example.polls.service.PollService;
+import com.example.polls.service.VoteService;
 import com.example.polls.util.AppConstants;
 
 import jakarta.validation.Valid;
@@ -35,6 +36,9 @@ public class PollController {
 
     @Autowired
     private PollService pollService;
+
+    @Autowired
+    private VoteService voteService;
 
     private static final Logger logger = LoggerFactory.getLogger(PollController.class);
 
@@ -69,7 +73,7 @@ public class PollController {
     public PollResponse castVote(@CurrentUser UserPrincipal currentUser,
             @PathVariable Long pollId,
             @Valid @RequestBody VoteRequest voteRequest) {
-        return pollService.castVoteAndGetUpdatedPoll(pollId, voteRequest, currentUser);
+        return voteService.castVoteAndGetUpdatedPoll(pollId, voteRequest, currentUser);
     }
 
 }
