@@ -7,7 +7,6 @@ import org.springframework.data.annotation.LastModifiedBy;
 import jakarta.persistence.MappedSuperclass;
 
 
-
 @MappedSuperclass
 @JsonIgnoreProperties(
         value = {"createdBy", "updatedBy"},

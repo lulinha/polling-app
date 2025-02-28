@@ -4,8 +4,8 @@ CREATE TABLE IF NOT EXISTS users (
     username varchar(15) NOT NULL,
     email varchar(40) NOT NULL,
     password varchar(100) NOT NULL,
-    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uk_users_username UNIQUE (username),
     CONSTRAINT uk_users_email UNIQUE (email)
 );
@@ -27,9 +27,9 @@ CREATE TABLE IF NOT EXISTS user_roles (
 CREATE TABLE IF NOT EXISTS polls (
     id bigint NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     question varchar(140) NOT NULL,
-    expiration_date_time timestamp NOT NULL,
-    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    expiration_date_time TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     created_by bigint DEFAULT NULL,
     updated_by bigint DEFAULT NULL
 );
@@ -46,8 +46,8 @@ CREATE TABLE IF NOT EXISTS votes (
     user_id bigint NOT NULL,
     poll_id bigint NOT NULL,
     choice_id bigint NOT NULL,
-    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_votes_user_id FOREIGN KEY (user_id) REFERENCES users (id),
     CONSTRAINT fk_votes_poll_id FOREIGN KEY (poll_id) REFERENCES polls (id),
     CONSTRAINT fk_votes_choice_id FOREIGN KEY (choice_id) REFERENCES choices (id)
@@ -59,8 +59,8 @@ CREATE TABLE IF NOT EXISTS kafka_outbox (
     message_key VARCHAR(255),
     message_body TEXT NOT NULL,
     status VARCHAR(20) NOT NULL CHECK (status IN ('PENDING', 'SENT', 'FAILED')),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    sent_at TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    sent_at TIMESTAMPTZ,
     retry_count INT DEFAULT 0
 );
 
@@ -70,6 +70,6 @@ CREATE TABLE IF NOT EXISTS kafka_dead_letter (
     message_key VARCHAR(255),
     message_body TEXT NOT NULL,
     error TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     retry_count INT DEFAULT 0
 );

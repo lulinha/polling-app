@@ -181,7 +181,7 @@ public class PollService {
                 Poll savedPoll = pollRepository.save(poll);
 
                 // 使用持久化发送
-                PollDTO pollDTO = ModelMapper.convertToDTO(savedPoll);
+                PollDTO pollDTO = ModelMapper.convertToPollDTO(savedPoll);
                 String message = JsonUtils.toJson(pollDTO);
                 logger.info("Sending message: {}", message);
                 kafkaProducerService.sendWithPersistence("poll-created", savedPoll.getId().toString(), message);

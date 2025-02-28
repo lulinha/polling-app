@@ -89,10 +89,7 @@ public class AuthService {
                 // kafkaProducerService.sendUserRegistrationEvent(savedUser.getId());
 
                 // 将用户信息转换为 DTO
-                UserDTO userDTO = new UserDTO();
-                userDTO.setId(savedUser.getId());
-                userDTO.setUsername(savedUser.getUsername());
-                userDTO.setEmail(savedUser.getEmail());
+                UserDTO userDTO = new UserDTO(savedUser.getId(), savedUser.getUsername(), savedUser.getEmail());
 
                 // 将 DTO 转换为 JSON
                 String message = JsonUtils.toJson(userDTO);

@@ -52,7 +52,7 @@ public class ModelMapper {
         return pollResponse;
     }
 
-    public static PollDTO convertToDTO(Poll poll) {
+    public static PollDTO convertToPollDTO(Poll poll) {
         PollDTO dto = new PollDTO();
         dto.setId(poll.getId());
         dto.setQuestion(poll.getQuestion());

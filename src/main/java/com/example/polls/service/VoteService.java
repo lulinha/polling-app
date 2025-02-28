@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Service;
 
 import com.example.polls.dto.VoteDTO;
 import com.example.polls.exception.BadRequestException;
@@ -27,6 +28,7 @@ import com.example.polls.security.UserPrincipal;
 import com.example.polls.util.JsonUtils;
 import com.example.polls.util.ModelMapper;
 
+@Service
 public class VoteService {
 
     @Autowired
