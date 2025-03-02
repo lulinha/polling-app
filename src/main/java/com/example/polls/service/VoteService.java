@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import com.example.polls.dto.VoteDTO;
@@ -42,6 +43,11 @@ public class VoteService {
 
     @Autowired
     private KafkaProducerService kafkaProducerService;
+
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
+
+    private static final String VOTE_COUNT_KEY = "poll_votes:";
 
     private static final Logger logger = LoggerFactory.getLogger(VoteService.class);
 
@@ -96,6 +102,70 @@ public class VoteService {
         User creator = userRepository.findById(poll.getCreatedBy())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "User with id" + poll.getCreatedBy() + " not found"));
+
+        return ModelMapper.mapPollToPollResponse(poll, choiceVotesMap, creator, vote.getChoice().getId());
+    }
+
+    public PollResponse castVoteAndGetUpdatedPollWithCache(Long pollId, VoteRequest voteRequest, UserPrincipal currentUser) {
+        Poll poll = pollRepository.findById(pollId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Poll with id" + pollId + " not found"));
+
+        if (poll.getExpirationDateTime().isBefore(Instant.now())) {
+            throw new BadRequestException("Sorry! This Poll has already expired");
+        }
+
+        User user = userRepository.findById(currentUser.getId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User with id " + currentUser.getId() + " not found"));
+
+        Choice selectedChoice = poll.getChoices().stream()
+                .filter(choice -> choice.getId().equals(voteRequest.getChoiceId()))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Choice with id" + voteRequest.getChoiceId() + " not found"));
+
+        Vote vote = new Vote();
+        vote.setPoll(poll);
+        vote.setUser(user);
+        vote.setChoice(selectedChoice);
+
+        try {
+            vote = voteRepository.save(vote);
+            Long choiceId = selectedChoice.getId();
+
+            // 更新Redis统计
+            String voteCountKey = VOTE_COUNT_KEY + pollId;
+            redisTemplate.opsForHash().increment(voteCountKey, choiceId.toString(), 1);
+
+            // 将投票信息转换为 DTO
+            VoteDTO voteDTO = new VoteDTO(vote.getId(), poll.getId(), selectedChoice.getId(), user.getId());
+
+            // 发送投票提交事件
+            // kafkaProducerService.sendVoteSubmittedEvent(vote.getId());
+            // 将 DTO 转换为 JSON
+            String message = JsonUtils.toJson(voteDTO);
+            kafkaProducerService.sendWithPersistence("vote-casted", vote.getId().toString(), message);
+        } catch (DataIntegrityViolationException ex) {
+            logger.info("User {} has already voted in Poll {}", currentUser.getId(), pollId);
+            throw new BadRequestException("Sorry! You have already cast your vote in this poll");
+        }
+
+        // -- Vote Saved, Return the updated Poll Response now --
+
+        // Retrieve Vote Counts of every choice belonging to the current poll
+        List<ChoiceVoteCount> votes = voteRepository.countByPollIdGroupByChoiceId(pollId);
+
+        Map<Long, Long> choiceVotesMap = votes.stream()
+                .collect(Collectors.toMap(ChoiceVoteCount::getChoiceId, ChoiceVoteCount::getVoteCount));
+
+        // Retrieve poll creator details
+        User creator = userRepository.findById(poll.getCreatedBy())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User with id" + poll.getCreatedBy() + " not found"));
+        // 缓存用户投票记录
+        String userVoteKey = "user_votes:" + currentUser.getId();
+        redisTemplate.opsForHash().put(userVoteKey, pollId.toString(), choiceId);
 
         return ModelMapper.mapPollToPollResponse(poll, choiceVotesMap, creator, vote.getChoice().getId());
     }

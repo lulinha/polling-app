@@ -16,6 +16,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.example.polls.dto.UserDTO;
 import com.example.polls.exception.AppException;
+import com.example.polls.exception.BadRequestException;
 import com.example.polls.model.Role;
 import com.example.polls.model.RoleName;
 import com.example.polls.model.User;
@@ -23,6 +24,7 @@ import com.example.polls.payload.ApiResponse;
 import com.example.polls.payload.JwtAuthenticationResponse;
 import com.example.polls.payload.LoginRequest;
 import com.example.polls.payload.SignUpRequest;
+import com.example.polls.payload.SignUpResponse;
 import com.example.polls.repository.RoleRepository;
 import com.example.polls.repository.UserRepository;
 import com.example.polls.security.JwtTokenProvider;
@@ -49,7 +51,7 @@ public class AuthService {
         @Autowired
         private KafkaProducerService kafkaProducerService;
 
-        public ResponseEntity<?> authenticateUser(LoginRequest loginRequest) {
+        public JwtAuthenticationResponse authenticateUser(LoginRequest loginRequest) {
                 Authentication authentication = authenticationManager.authenticate(
                                 new UsernamePasswordAuthenticationToken(
                                                 loginRequest.getUsernameOrEmail(),
@@ -58,21 +60,17 @@ public class AuthService {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
                 String jwt = tokenProvider.generateToken(authentication);
-                return ResponseEntity.ok(new JwtAuthenticationResponse(jwt));
+                return new JwtAuthenticationResponse(jwt);
         }
 
-        public ResponseEntity<?> registerUser(SignUpRequest signUpRequest) {
+        public SignUpResponse registerUser(SignUpRequest signUpRequest) {
                 if (userRepository.existsByUsername(signUpRequest.getUsername())) {
-                        return new ResponseEntity<>(new ApiResponse(false, "Username is already taken!"),
-                                        HttpStatus.BAD_REQUEST);
+                        throw new BadRequestException("Username is already taken!");
                 }
-
                 if (userRepository.existsByEmail(signUpRequest.getEmail())) {
-                        return new ResponseEntity<>(new ApiResponse(false, "Email Address already in use!"),
-                                        HttpStatus.BAD_REQUEST);
+                        throw new BadRequestException("Email Address already in use!");
                 }
 
-                // Creating user's account
                 User user = new User(signUpRequest.getName(), signUpRequest.getUsername(),
                                 signUpRequest.getEmail(), signUpRequest.getPassword());
 
@@ -85,21 +83,14 @@ public class AuthService {
 
                 User savedUser = userRepository.save(user);
 
-                // 发送用户注册事件
-                // kafkaProducerService.sendUserRegistrationEvent(savedUser.getId());
-
-                // 将用户信息转换为 DTO
-                UserDTO userDTO = new UserDTO(savedUser.getId(), savedUser.getUsername(), savedUser.getEmail());
+                SignUpResponse response = new SignUpResponse(savedUser.getId(), savedUser.getUsername(),
+                                savedUser.getEmail());
 
                 // 将 DTO 转换为 JSON
-                String message = JsonUtils.toJson(userDTO);
+                String message = JsonUtils.toJson(response);
 
                 kafkaProducerService.sendWithPersistence("user-registration", savedUser.getId().toString(), message);
 
-                URI location = ServletUriComponentsBuilder
-                                .fromCurrentContextPath().path("/users/{username}")
-                                .buildAndExpand(savedUser.getUsername()).toUri();
-
-                return ResponseEntity.created(location).body(new ApiResponse(true, "User registered successfully"));
+                return response;
         }
 }

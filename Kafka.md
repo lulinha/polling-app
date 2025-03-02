@@ -4,7 +4,7 @@
 
 启动 Zookeeper 和 Kafka 服务：
 
-cd C:\kafka_2.13-3.9.0
+cd C:\service\kafka_2.13-3.9.0
 
 ```bash
 bin\windows\zookeeper-server-start.bat config/zookeeper.properties

@@ -46,26 +46,26 @@ public class PollController {
     public PagedResponse<PollResponse> getPolls(@CurrentUser UserPrincipal currentUser,
             @RequestParam(value = "page", defaultValue = AppConstants.DEFAULT_PAGE_NUMBER) int page,
             @RequestParam(value = "size", defaultValue = AppConstants.DEFAULT_PAGE_SIZE) int size) {
-        return pollService.getAllPolls(currentUser, page, size);
+        return pollService.getAllPollsWithCache(currentUser, page, size);
     }
 
     @PostMapping
     @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<?> createPoll(@Valid @RequestBody PollRequest pollRequest) {
-        Poll poll = pollService.createPoll(pollRequest);
+    public ResponseEntity<ApiResponse<Poll>> createPoll(@Valid @RequestBody PollRequest pollRequest) {
+        Poll poll = pollService.createPollWithCache(pollRequest);
 
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest().path("/{pollId}")
                 .buildAndExpand(poll.getId()).toUri();
-
+        ApiResponse<Poll> response = new ApiResponse<>(true, "Poll Created Successfully", poll);
         return ResponseEntity.created(location)
-                .body(new ApiResponse(true, "Poll Created Successfully"));
+                .body(response);
     }
 
     @GetMapping("/{pollId}")
     public PollResponse getPollById(@CurrentUser UserPrincipal currentUser,
             @PathVariable Long pollId) {
-        return pollService.getPollById(pollId, currentUser);
+        return pollService.getPollByIdWithCache(pollId, currentUser);
     }
 
     @PostMapping("/{pollId}/votes")
@@ -73,7 +73,7 @@ public class PollController {
     public PollResponse castVote(@CurrentUser UserPrincipal currentUser,
             @PathVariable Long pollId,
             @Valid @RequestBody VoteRequest voteRequest) {
-        return voteService.castVoteAndGetUpdatedPoll(pollId, voteRequest, currentUser);
+        return voteService.castVoteAndGetUpdatedPollWithCache(pollId, voteRequest, currentUser);
     }
 
 }
