@@ -61,7 +61,6 @@ public class PollService {
         private RedisTemplate<String, Object> redisTemplate;
 
         private static final String VOTE_COUNT_KEY = "poll_votes:";
-        private static final String POLL_CREATOR_KEY = "poll_creators:";
 
         private static final Logger logger = LoggerFactory.getLogger(PollService.class);
 

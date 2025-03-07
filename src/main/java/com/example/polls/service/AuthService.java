@@ -1,26 +1,20 @@
 package com.example.polls.service;
 
-import java.net.URI;
 import java.util.Collections;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import com.example.polls.dto.UserDTO;
 import com.example.polls.exception.AppException;
 import com.example.polls.exception.BadRequestException;
 import com.example.polls.model.Role;
 import com.example.polls.model.RoleName;
 import com.example.polls.model.User;
-import com.example.polls.payload.ApiResponse;
 import com.example.polls.payload.JwtAuthenticationResponse;
 import com.example.polls.payload.LoginRequest;
 import com.example.polls.payload.SignUpRequest;

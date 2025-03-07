@@ -55,7 +55,7 @@ public class PollController {
         Poll poll = pollService.createPollWithCache(pollRequest);
 
         URI location = ServletUriComponentsBuilder
-                .fromCurrentRequest().path("/{pollId}")
+                .fromCurrentRequest().path("/api/polls/{pollId}")
                 .buildAndExpand(poll.getId()).toUri();
         ApiResponse<Poll> response = new ApiResponse<>(true, "Poll Created Successfully", poll);
         return ResponseEntity.created(location)

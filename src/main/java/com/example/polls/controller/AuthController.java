@@ -41,7 +41,7 @@ public class AuthController {
                 // 注册成功后，客户端可通过 Location: http://localhost:8080/users/johndoe 直接访问新用户的详细信息。
                 URI location = ServletUriComponentsBuilder
                                 .fromCurrentContextPath()
-                                .path("/users/{username}")
+                                .path("/api/users/{username}")
                                 .buildAndExpand(response.getUsername())
                                 .toUri();
                 // 返回响应（可自定义 Body 内容）

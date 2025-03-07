@@ -129,10 +129,9 @@ public class VoteService {
         vote.setPoll(poll);
         vote.setUser(user);
         vote.setChoice(selectedChoice);
-
+        Long choiceId = selectedChoice.getId();
         try {
             vote = voteRepository.save(vote);
-            Long choiceId = selectedChoice.getId();
 
             // 更新Redis统计
             String voteCountKey = VOTE_COUNT_KEY + pollId;

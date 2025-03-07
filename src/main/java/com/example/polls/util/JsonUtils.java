@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.StreamWriteConstraints;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 public class JsonUtils {
@@ -17,6 +18,8 @@ public class JsonUtils {
     private static ObjectMapper createObjectMapper() {
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule()); // 注册 JavaTimeModule
+         // 禁用将日期写为时间戳，强制使用 ISO 格式
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         // 调整嵌套深度限制
         StreamWriteConstraints constraints = StreamWriteConstraints.builder()
                 .maxNestingDepth(2000) // 将最大嵌套深度调整为 2000

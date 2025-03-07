@@ -17,3 +17,10 @@ bin\windows\kafka-topics.bat --create --topic user-registered --bootstrap-server
 bin\windows\kafka-topics.bat --create --topic poll-created --bootstrap-server localhost:9092
 bin\windows\kafka-topics.bat --create --topic vote-casted --bootstrap-server localhost:9092
 ```
+
+删除主题
+```bash
+bin\windows\kafka-topics.bat --delete  --topic user-registered --bootstrap-server localhost:9092
+bin\windows\kafka-topics.bat --delete  --topic poll-created --bootstrap-server localhost:9092
+bin\windows\kafka-topics.bat --delete  --topic vote-casted --bootstrap-server localhost:9092
+```
