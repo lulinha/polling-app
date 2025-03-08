@@ -30,13 +30,13 @@ public class RedisConfig {
 
     @Bean
     public RedisConnectionFactory redisConnectionFactory(
-        @Value("${spring.redis.host}") String host,
-        @Value("${spring.redis.port}") int port,
-        @Value("${spring.redis.password}") String password) {
+            @Value("${spring.redis.host}") String host,
+            @Value("${spring.redis.port}") int port,
+            @Value("${spring.redis.password}") String password) {
 
         RedisStandaloneConfiguration config = new RedisStandaloneConfiguration(host, port);
         config.setPassword(RedisPassword.of(password));
-        
+
         LettuceConnectionFactory factory = new LettuceConnectionFactory(config);
         factory.setValidateConnection(true);
         return factory;
@@ -48,26 +48,33 @@ public class RedisConfig {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(connectionFactory);
 
-        // 创建自定义 ObjectMapper
+        // 创建支持 Java 8 时间类型的 ObjectMapper
         ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule()); // 支持 Java 8 时间类型
-        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); // 禁用时间戳格式
+        objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         objectMapper.activateDefaultTyping(
-            BasicPolymorphicTypeValidator.builder().allowIfBaseType(Object.class).build(),
-            ObjectMapper.DefaultTyping.NON_FINAL,
-            JsonTypeInfo.As.PROPERTY
-        ); // 支持多态反序列化
+                BasicPolymorphicTypeValidator.builder().allowIfBaseType(Object.class).build(),
+                ObjectMapper.DefaultTyping.NON_FINAL,
+                JsonTypeInfo.As.PROPERTY);
 
-        // 创建 JSON 序列化器
-        GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(objectMapper);
+        // 定义序列化器
+        GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer(objectMapper);
+        StringRedisSerializer stringSerializer = new StringRedisSerializer();
 
-        // Key/HashKey 使用字符串序列化
-        template.setKeySerializer(new StringRedisSerializer());
-        template.setHashKeySerializer(new StringRedisSerializer());
+        // Key 序列化器（所有 Key 统一使用字符串）
+        template.setKeySerializer(stringSerializer);
+        template.setHashKeySerializer(stringSerializer);
 
-        // Value/HashValue 使用 JSON 序列化
-        template.setValueSerializer(serializer);
-        template.setHashValueSerializer(serializer);
+        // Value 序列化器
+        // -------------------------------
+        // 如果 ZSET 的 Member 是 Long 类型，需设置为字符串序列化器：
+        template.setValueSerializer(stringSerializer);
+        // -------------------------------
+        // 如果 ZSET 的 Member 是复杂对象（如 PollResponse），需设置为 JSON 序列化器：
+        // template.setValueSerializer(jsonSerializer);
+
+        // Hash Value 序列化器
+        template.setHashValueSerializer(jsonSerializer);
 
         template.afterPropertiesSet();
         return template;
@@ -77,14 +84,14 @@ public class RedisConfig {
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
         RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
-            .entryTtl(Duration.ofMinutes(10))
-            .disableCachingNullValues()
-            .serializeValuesWith(RedisSerializationContext.SerializationPair
-                .fromSerializer(new GenericJackson2JsonRedisSerializer(createCacheObjectMapper())));
+                .entryTtl(Duration.ofMinutes(10))
+                .disableCachingNullValues()
+                .serializeValuesWith(RedisSerializationContext.SerializationPair
+                        .fromSerializer(new GenericJackson2JsonRedisSerializer(createCacheObjectMapper())));
 
         return RedisCacheManager.builder(connectionFactory)
-            .cacheDefaults(config)
-            .build();
+                .cacheDefaults(config)
+                .build();
     }
 
     // 专用于缓存的 ObjectMapper（与 RedisTemplate 配置一致）

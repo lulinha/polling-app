@@ -9,14 +9,22 @@ public class UserProfile {
     private Instant joinedAt;
     private Long pollCount;
     private Long voteCount;
+    private int points; // 新增积分字段
+    private int level; // 新增等级字段
 
-    public UserProfile(Long id, String username, String name, Instant joinedAt, Long pollCount, Long voteCount) {
+    public UserProfile() {
+    }
+
+    public UserProfile(Long id, String username, String name, Instant joinedAt, Long pollCount, Long voteCount,
+            int points, int level) {
         this.id = id;
         this.username = username;
         this.name = name;
         this.joinedAt = joinedAt;
         this.pollCount = pollCount;
         this.voteCount = voteCount;
+        this.points = points;
+        this.level = level;
     }
 
     public Long getId() {
@@ -66,4 +74,21 @@ public class UserProfile {
     public void setVoteCount(Long voteCount) {
         this.voteCount = voteCount;
     }
+
+    public int getPoints() {
+        return points;
+    }
+
+    public void setPoints(int points) {
+        this.points = points;
+    }
+
+    public int getLevel() {
+        return level;
+    }
+
+    public void setLevel(int level) {
+        this.level = level;
+    }
+
 }

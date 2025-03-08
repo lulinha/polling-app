@@ -4,6 +4,9 @@ CREATE TABLE IF NOT EXISTS users (
     username varchar(15) NOT NULL,
     email varchar(40) NOT NULL,
     password varchar(100) NOT NULL,
+    points int DEFAULT 0,
+    level int DEFAULT 1,
+    banned BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uk_users_username UNIQUE (username),
@@ -28,6 +31,7 @@ CREATE TABLE IF NOT EXISTS polls (
     id bigint NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     question varchar(140) NOT NULL,
     expiration_date_time TIMESTAMPTZ NOT NULL,
+    approved BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     created_by bigint DEFAULT NULL,
@@ -71,5 +75,26 @@ CREATE TABLE IF NOT EXISTS kafka_dead_letter (
     message_body TEXT NOT NULL,
     error TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    retry_count INT DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS follows (
+    id bigint NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    follower_id bigint NOT NULL,
+    followed_id bigint NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_follows_follower_id FOREIGN KEY (follower_id) REFERENCES users (id),
+    CONSTRAINT fk_follows_followed_id FOREIGN KEY (followed_id) REFERENCES users (id),
+    CONSTRAINT uk_follows_follower_followed UNIQUE (follower_id, followed_id)
+);
+
+CREATE TABLE IF NOT EXISTS messages (
+    id bigint NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    topic VARCHAR(255) NOT NULL,
+    message_key VARCHAR(255),
+    message_body TEXT NOT NULL,
+    status VARCHAR(20) NOT NULL CHECK (status IN ('PENDING', 'SENT', 'FAILED')),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    sent_at TIMESTAMPTZ,
     retry_count INT DEFAULT 0
 );

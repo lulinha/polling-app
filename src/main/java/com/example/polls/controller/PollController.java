@@ -7,15 +7,18 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import com.example.polls.constants.AppConstants;
 import com.example.polls.model.Poll;
 import com.example.polls.payload.ApiResponse;
 import com.example.polls.payload.PagedResponse;
@@ -26,7 +29,6 @@ import com.example.polls.security.CurrentUser;
 import com.example.polls.security.UserPrincipal;
 import com.example.polls.service.PollService;
 import com.example.polls.service.VoteService;
-import com.example.polls.util.AppConstants;
 
 import jakarta.validation.Valid;
 
@@ -51,8 +53,9 @@ public class PollController {
 
     @PostMapping
     @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<ApiResponse<Poll>> createPoll(@Valid @RequestBody PollRequest pollRequest) {
-        Poll poll = pollService.createPollWithCache(pollRequest);
+    public ResponseEntity<ApiResponse<Poll>> createPoll(@Valid @RequestBody PollRequest pollRequest,
+            @CurrentUser UserPrincipal currentUser) {
+        Poll poll = pollService.createPollWithCache(pollRequest, currentUser);
 
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest().path("/api/polls/{pollId}")
@@ -74,6 +77,24 @@ public class PollController {
             @PathVariable Long pollId,
             @Valid @RequestBody VoteRequest voteRequest) {
         return voteService.castVoteAndGetUpdatedPollWithCache(pollId, voteRequest, currentUser);
+    }
+
+    @GetMapping("/hot")
+    public PagedResponse<PollResponse> getHotPolls(
+            @CurrentUser UserPrincipal currentUser) {
+        return pollService.getHotPolls(currentUser);
+    }
+
+    @PutMapping("/{pollId}/approve")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Poll approvePoll(@PathVariable Long pollId, @RequestParam boolean approved) {
+        return pollService.approvePoll(pollId, approved);
+    }
+
+    @DeleteMapping("/{pollId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public void deletePoll(@PathVariable Long pollId) {
+        pollService.deletePoll(pollId);
     }
 
 }

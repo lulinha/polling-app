@@ -2,9 +2,12 @@ package com.example.polls.service;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.Function;
@@ -23,6 +26,8 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.polls.constants.AppConstants;
+import com.example.polls.constants.RedisConstants;
 import com.example.polls.dto.PollDTO;
 import com.example.polls.exception.BadRequestException;
 import com.example.polls.exception.ResourceNotFoundException;
@@ -38,7 +43,6 @@ import com.example.polls.repository.PollRepository;
 import com.example.polls.repository.UserRepository;
 import com.example.polls.repository.VoteRepository;
 import com.example.polls.security.UserPrincipal;
-import com.example.polls.util.AppConstants;
 import com.example.polls.util.JsonUtils;
 import com.example.polls.util.ModelMapper;
 
@@ -55,12 +59,16 @@ public class PollService {
         private UserRepository userRepository;
 
         @Autowired
+        private UserService userService;
+
+        @Autowired
         private KafkaProducerService kafkaProducerService;
 
         @Autowired
-        private RedisTemplate<String, Object> redisTemplate;
+        private NotificationService notificationService;
 
-        private static final String VOTE_COUNT_KEY = "poll_votes:";
+        @Autowired
+        private RedisTemplate<String, Object> redisTemplate;
 
         private static final Logger logger = LoggerFactory.getLogger(PollService.class);
 
@@ -220,7 +228,7 @@ public class PollService {
         }
 
         @Transactional
-        public Poll createPoll(PollRequest pollRequest) {
+        public Poll createPoll(PollRequest pollRequest, UserPrincipal currentUser) {
                 Poll poll = new Poll();
                 poll.setQuestion(pollRequest.getQuestion());
 
@@ -236,6 +244,14 @@ public class PollService {
 
                 // 保存投票
                 Poll savedPoll = pollRepository.save(poll);
+
+                // 获取当前用户
+                User user = userRepository.findById(currentUser.getId())
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "User with id " + currentUser.getId() + " not found"));
+
+                // 为用户增加积分，这里假设创建投票加 10 积分，可按需调整
+                userService.addPoints(user, 10);
 
                 // 使用持久化发送
                 PollDTO pollDTO = ModelMapper.convertToPollDTO(savedPoll);
@@ -248,7 +264,7 @@ public class PollService {
 
         @Transactional
         @CacheEvict(allEntries = true) // 创建新投票时清除所有缓存（根据业务需求调整）
-        public Poll createPollWithCache(PollRequest pollRequest) {
+        public Poll createPollWithCache(PollRequest pollRequest, UserPrincipal currentUser) {
                 Poll poll = new Poll();
                 poll.setQuestion(pollRequest.getQuestion());
 
@@ -264,6 +280,18 @@ public class PollService {
 
                 // 保存投票
                 Poll savedPoll = pollRepository.save(poll);
+
+                // 获取当前用户
+                User user = userRepository.findById(currentUser.getId())
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "User with id " + currentUser.getId() + " not found"));
+
+                // 为用户增加积分，这里假设创建投票加 10 积分，可按需调整
+                userService.addPoints(user, 10);
+
+                // 创建投票时初始化热度分数为0
+                redisTemplate.opsForZSet().add(RedisConstants.HOT_POLLS_KEY, savedPoll.getId(), 0);
+
                 // 预热投票统计缓存
                 initializeVoteCountsInRedis(savedPoll);
 
@@ -277,7 +305,7 @@ public class PollService {
         }
 
         private void initializeVoteCountsInRedis(Poll poll) {
-                String key = VOTE_COUNT_KEY + poll.getId();
+                String key = RedisConstants.VOTE_COUNT_KEY + poll.getId();
                 Map<String, Integer> initialCounts = poll.getChoices().stream()
                                 .collect(Collectors.toMap(
                                                 choice -> choice.getId().toString(),
@@ -308,7 +336,7 @@ public class PollService {
         }
 
         private Map<Long, Long> getChoiceVoteCountMapFromRedis(Long pollId) {
-                String key = VOTE_COUNT_KEY + pollId;
+                String key = RedisConstants.VOTE_COUNT_KEY + pollId;
                 Map<Object, Object> entries = redisTemplate.opsForHash().entries(key);
                 return entries.entrySet().stream()
                                 .collect(Collectors.toMap(
@@ -362,7 +390,13 @@ public class PollService {
         }
 
         public void deletePoll(Long pollId) {
-                // 删除投票逻辑
+                Poll poll = pollRepository.findById(pollId)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Poll with id " + pollId + " not found"));
+                pollRepository.delete(poll);
+
+                // 通知相关用户
+                notificationService.notifyUserAboutPollDeletion(pollId);
         }
 
         @CacheEvict(key = "#pollId")
@@ -371,7 +405,7 @@ public class PollService {
                 pollRepository.deleteById(pollId);
 
                 // 清理相关缓存
-                String voteCountKey = VOTE_COUNT_KEY + pollId;
+                String voteCountKey = RedisConstants.VOTE_COUNT_KEY + pollId;
                 redisTemplate.delete(voteCountKey);
 
                 // 清理用户投票记录缓存
@@ -427,5 +461,99 @@ public class PollService {
                                 .collect(Collectors.toMap(User::getId, Function.identity()));
 
                 return creatorMap;
+        }
+
+        // 添加获取热门投票的方法
+        public PagedResponse<PollResponse> getHotPolls(UserPrincipal currentUser) {
+                // 获取热门投票ID（Redis ZSET）
+                Set<Long> pollIds = getHotPollIdsFromCache();
+
+                // 缓存未命中时的兜底策略
+                if (pollIds.isEmpty()) {
+                        pollIds = getFallbackPollIds();
+                }
+
+                // 获取投票详情并保持顺序
+                List<PollResponse> pollResponses = getOrderedPollResponses(pollIds);
+
+                // 构建分页响应（移至Service层）
+                return buildPagedResponse(pollResponses);
+        }
+
+        // 私有辅助方法（模块化拆分）
+        private Set<Long> getHotPollIdsFromCache() {
+                return Optional.ofNullable(
+                                redisTemplate.opsForZSet()
+                                                .reverseRange(RedisConstants.HOT_POLLS_KEY, 0,
+                                                                RedisConstants.HOT_POLLS_LIMIT - 1))
+                                .orElseGet(Collections::emptySet)
+                                .stream()
+                                .map(id -> ((Number) id).longValue())
+                                .collect(Collectors.toSet());
+        }
+
+        private Set<Long> getFallbackPollIds() {
+                return pollRepository.findRecentActivePolls(RedisConstants.HOT_POLLS_LIMIT)
+                                .stream()
+                                .map(Poll::getId)
+                                .collect(Collectors.toSet());
+        }
+
+        private List<PollResponse> getOrderedPollResponses(Set<Long> pollIds) {
+                if (pollIds.isEmpty()) {
+                        return Collections.emptyList();
+                }
+
+                List<Poll> polls = pollRepository.findByIdIn(new ArrayList<>(pollIds));
+                Map<Long, Poll> pollMap = polls.stream()
+                                .collect(Collectors.toMap(Poll::getId, Function.identity()));
+
+                return pollIds.stream()
+                                .map(pollMap::get)
+                                .filter(Objects::nonNull)
+                                .map(this::convertToPollResponse)
+                                .collect(Collectors.toList());
+        }
+
+        private PollResponse convertToPollResponse(Poll poll) {
+                return ModelMapper.mapPollToPollResponse(
+                                poll,
+                                getChoiceVoteCountMap(Collections.singletonList(poll.getId())),
+                                userRepository.getReferenceById(poll.getCreatedBy()), // 使用正确方法
+                                null);
+        }
+
+        private PagedResponse<PollResponse> buildPagedResponse(List<PollResponse> content) {
+                int totalElements = content.size();
+                return new PagedResponse<>(
+                                content,
+                                0, // page
+                                RedisConstants.HOT_POLLS_LIMIT, // size（使用统一常量）
+                                totalElements,
+                                calculateTotalPages(totalElements),
+                                isLastPage(totalElements));
+        }
+
+        private int calculateTotalPages(int totalElements) {
+                return (int) Math.ceil((double) totalElements / RedisConstants.HOT_POLLS_LIMIT);
+        }
+
+        private boolean isLastPage(int totalElements) {
+                return totalElements <= RedisConstants.HOT_POLLS_LIMIT;
+        }
+
+        public Poll approvePoll(Long pollId, boolean approved) {
+                Poll poll = pollRepository.findById(pollId)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                "Poll with id " + pollId + " not found"));
+                poll.setApproved(approved);
+                Poll savedPoll = pollRepository.save(poll);
+
+                // 通知相关用户
+                if (!approved) {
+                        // 假设这里有一个通知用户的方法
+                        notificationService.notifyUserAboutPollRejection(pollId);
+                }
+                return savedPoll;
         }
 }

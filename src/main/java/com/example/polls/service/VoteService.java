@@ -48,6 +48,8 @@ public class VoteService {
     private RedisTemplate<String, Object> redisTemplate;
 
     private static final String VOTE_COUNT_KEY = "poll_votes:";
+    private static final String HOT_POLLS_KEY = "hot_polls";
+    private static final int HOT_POLLS_LIMIT = 10;
 
     private static final Logger logger = LoggerFactory.getLogger(VoteService.class);
 
@@ -106,7 +108,8 @@ public class VoteService {
         return ModelMapper.mapPollToPollResponse(poll, choiceVotesMap, creator, vote.getChoice().getId());
     }
 
-    public PollResponse castVoteAndGetUpdatedPollWithCache(Long pollId, VoteRequest voteRequest, UserPrincipal currentUser) {
+    public PollResponse castVoteAndGetUpdatedPollWithCache(Long pollId, VoteRequest voteRequest,
+            UserPrincipal currentUser) {
         Poll poll = pollRepository.findById(pollId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Poll with id" + pollId + " not found"));
@@ -165,6 +168,12 @@ public class VoteService {
         // 缓存用户投票记录
         String userVoteKey = "user_votes:" + currentUser.getId();
         redisTemplate.opsForHash().put(userVoteKey, pollId.toString(), choiceId);
+
+        // 每次投票后增加热度分数（每次投票+1分）
+        redisTemplate.opsForZSet().incrementScore(HOT_POLLS_KEY, pollId, 1);
+
+        // 保持Sorted Set大小不超过10个
+        redisTemplate.opsForZSet().removeRange(HOT_POLLS_KEY, 0, -HOT_POLLS_LIMIT - 1);
 
         return ModelMapper.mapPollToPollResponse(poll, choiceVotesMap, creator, vote.getChoice().getId());
     }

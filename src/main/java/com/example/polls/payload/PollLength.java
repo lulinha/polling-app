@@ -12,6 +12,14 @@ public class PollLength {
     @Max(23)
     private Integer hours;
 
+    public PollLength() {
+    }
+
+    public PollLength(@NotNull @Max(7) Integer days, @NotNull @Max(23) Integer hours) {
+        this.days = days;
+        this.hours = hours;
+    }
+
     public int getDays() {
         return days;
     }
