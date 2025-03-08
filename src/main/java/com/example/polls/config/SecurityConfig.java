@@ -14,7 +14,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import com.example.polls.security.CustomUserDetailsService;
 import com.example.polls.security.JwtAuthenticationEntryPoint;
 import com.example.polls.security.JwtAuthenticationFilter;
 
@@ -23,12 +22,9 @@ import com.example.polls.security.JwtAuthenticationFilter;
 @EnableMethodSecurity(securedEnabled = true, jsr250Enabled = true)
 public class SecurityConfig {
 
-    private final CustomUserDetailsService customUserDetailsService;
     private final JwtAuthenticationEntryPoint unauthorizedHandler;
 
-    public SecurityConfig(CustomUserDetailsService customUserDetailsService,
-            JwtAuthenticationEntryPoint unauthorizedHandler) {
-        this.customUserDetailsService = customUserDetailsService;
+    public SecurityConfig(JwtAuthenticationEntryPoint unauthorizedHandler) {
         this.unauthorizedHandler = unauthorizedHandler;
     }
 
@@ -47,6 +43,8 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
+
+    
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {

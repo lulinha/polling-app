@@ -5,6 +5,10 @@ public class UserSummary {
     private String username;
     private String name;
 
+    public UserSummary() {
+        
+    }
+
     public UserSummary(Long id, String username, String name) {
         this.id = id;
         this.username = username;

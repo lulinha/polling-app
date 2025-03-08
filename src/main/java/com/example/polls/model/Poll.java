@@ -11,6 +11,7 @@ import org.hibernate.annotations.FetchMode;
 import com.example.polls.model.audit.UserDateAudit;
 
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -33,12 +34,7 @@ public class Poll extends UserDateAudit {
     @Size(max = 140)
     private String question;
 
-    @OneToMany(
-            mappedBy = "poll",
-            cascade = CascadeType.ALL,
-            fetch = FetchType.EAGER,
-            orphanRemoval = true
-    )
+    @OneToMany(mappedBy = "poll", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
     @Size(min = 2, max = 6)
     @Fetch(FetchMode.SELECT)
     @BatchSize(size = 30)
@@ -46,6 +42,9 @@ public class Poll extends UserDateAudit {
 
     @NotNull
     private Instant expirationDateTime;
+
+    @Column(name = "approved")
+    private boolean isApproved; // 新增审核状态字段
 
     public Long getId() {
         return id;
@@ -87,6 +86,14 @@ public class Poll extends UserDateAudit {
     public void removeChoice(Choice choice) {
         choices.remove(choice);
         choice.setPoll(null);
+    }
+
+    public boolean isApproved() {
+        return isApproved;
+    }
+
+    public void setApproved(boolean approved) {
+        isApproved = approved;
     }
 
 }

@@ -1,15 +1,21 @@
 package com.example.polls.controller;
 
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.polls.constants.AppConstants;
+import com.example.polls.model.User;
+import com.example.polls.model.Vote;
 import com.example.polls.payload.PagedResponse;
 import com.example.polls.payload.PollResponse;
 import com.example.polls.payload.UserIdentityAvailability;
@@ -19,7 +25,6 @@ import com.example.polls.security.CurrentUser;
 import com.example.polls.security.UserPrincipal;
 import com.example.polls.service.PollService;
 import com.example.polls.service.UserService;
-import com.example.polls.util.AppConstants;
 
 @RestController
 @RequestMapping("/api")
@@ -68,6 +73,24 @@ public class UserController {
             @RequestParam(value = "page", defaultValue = AppConstants.DEFAULT_PAGE_NUMBER) int page,
             @RequestParam(value = "size", defaultValue = AppConstants.DEFAULT_PAGE_SIZE) int size) {
         return pollService.getPollsVotedBy(username, currentUser, page, size);
+    }
+
+    @PutMapping("/{userId}/ban")
+    @PreAuthorize("hasRole('ADMIN')")
+    public User banUser(@PathVariable Long userId) {
+        return userService.banUser(userId);
+    }
+
+    @GetMapping("/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public User getUserById(@PathVariable Long userId) {
+        return userService.getUserById(userId);
+    }
+
+    @GetMapping("/{userId}/votes")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<Vote> getUserVotes(@PathVariable Long userId) {
+        return userService.getUserVotes(userId);
     }
 
 }

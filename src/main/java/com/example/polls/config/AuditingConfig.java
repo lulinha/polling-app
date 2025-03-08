@@ -1,15 +1,17 @@
 package com.example.polls.config;
 
-import com.example.polls.security.UserPrincipal;
+import java.util.Optional;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import java.util.Optional;
+import com.example.polls.security.UserPrincipal;
 
 @Configuration
 @EnableJpaAuditing
@@ -24,6 +26,7 @@ public class AuditingConfig {
 class SpringSecurityAuditAwareImpl implements AuditorAware<Long> {
 
     @Override
+    @NonNull  // 明确声明返回值非空
     public Optional<Long> getCurrentAuditor() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 

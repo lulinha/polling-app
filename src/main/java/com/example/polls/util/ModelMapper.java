@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import com.example.polls.dto.ChoiceDTO;
 import com.example.polls.dto.PollDTO;
 import com.example.polls.model.Poll;
@@ -15,6 +17,9 @@ import com.example.polls.payload.UserSummary;
 
 public class ModelMapper {
 
+    // 处理 getReferenceById() 的延迟加载, 如果 ModelMapper.mapPollToPollResponse 中需要访问用户详细信息（如用户名、邮箱），
+    // 需确保在事务上下文中使用 @Transactional 注解，否则可能触发 LazyInitializationException：
+    @Transactional(readOnly = true)
     public static PollResponse mapPollToPollResponse(Poll poll, Map<Long, Long> choiceVotesMap, User creator,
             Long userVote) {
         PollResponse pollResponse = new PollResponse();

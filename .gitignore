@@ -1,4 +1,7 @@
 HELP.md
+git.md
+Kafka.md
+start_services.bat
 target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
