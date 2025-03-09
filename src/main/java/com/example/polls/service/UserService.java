@@ -3,7 +3,13 @@ package com.example.polls.service;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.polls.exception.ResourceNotFoundException;
 import com.example.polls.model.User;
@@ -44,6 +50,29 @@ public class UserService {
 
     public UserSummary getCurrentUser(UserPrincipal currentUser) {
         return new UserSummary(currentUser.getId(), currentUser.getUsername(), currentUser.getName());
+    }
+
+     // 核心方法：获取当前认证用户
+    @Transactional(readOnly = true)
+    public User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new AuthenticationCredentialsNotFoundException("用户未登录");
+        }
+
+        // 根据认证主体类型处理不同情况
+        Object principal = authentication.getPrincipal();
+        
+        if (principal instanceof UserDetails) { // JWT 或 Spring Security UserDetails
+            return (User) principal;
+        } else if (principal instanceof String) { // 用户名作为 principal
+            String username = (String) principal;
+            return userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("用户不存在: " + username));
+        }
+
+        throw new IllegalStateException("无法识别的用户凭证类型");
     }
 
     public UserIdentityAvailability checkUsernameAvailability(String username) {

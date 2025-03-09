@@ -98,3 +98,76 @@ CREATE TABLE IF NOT EXISTS messages (
     sent_at TIMESTAMPTZ,
     retry_count INT DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS user_feedback (
+    id bigint NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id bigint NOT NULL,
+    feedback_text text NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    response_text text,
+    responded_at TIMESTAMPTZ,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+
+CREATE TABLE IF NOT EXISTS categories (
+    id bigint NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name VARCHAR(40) NOT NULL UNIQUE,
+    description VARCHAR(200)
+);
+
+CREATE TABLE IF NOT EXISTS tags (
+    id bigint NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name VARCHAR(40) NOT NULL UNIQUE
+);
+
+-- 关联表
+CREATE TABLE IF NOT EXISTS poll_categories (
+    poll_id BIGINT NOT NULL REFERENCES polls(id) ON DELETE CASCADE,
+    category_id BIGINT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+    PRIMARY KEY (poll_id, category_id)
+);
+
+CREATE TABLE IF NOT EXISTS poll_tags (
+    poll_id BIGINT NOT NULL REFERENCES polls(id) ON DELETE CASCADE,
+    tag_id BIGINT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+    PRIMARY KEY (poll_id, tag_id)
+);
+
+-- 索引优化
+CREATE INDEX idx_poll_categories_category ON poll_categories(category_id);
+CREATE INDEX idx_poll_tags_tag ON poll_tags(tag_id);
+-- 如果使用自动创建标签方案，建议添加唯一性约束：
+ALTER TABLE tags ADD CONSTRAINT unique_tag_name UNIQUE (name);
+
+CREATE TABLE favorites (
+    id bigint NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    poll_id BIGINT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    
+    -- 外键约束（级联删除）
+    CONSTRAINT fk_favorite_user 
+        FOREIGN KEY (user_id) 
+        REFERENCES users(id) 
+        ON DELETE CASCADE,
+    
+    CONSTRAINT fk_favorite_poll 
+        FOREIGN KEY (poll_id) 
+        REFERENCES polls(id) 
+        ON DELETE CASCADE,
+    
+    -- 复合唯一约束（防止重复收藏）
+    CONSTRAINT uniq_user_poll 
+        UNIQUE (user_id, poll_id)
+);
+
+-- 索引优化（按用户查询收藏列表）
+CREATE INDEX idx_favorites_user ON favorites USING BRIN (user_id);
+CREATE INDEX idx_favorites_created ON favorites USING BRIN (created_at);
+
+-- 可选：为高频访问字段添加覆盖索引
+CREATE INDEX idx_favorites_user_poll 
+    ON favorites (user_id, poll_id) 
+    INCLUDE (created_at);

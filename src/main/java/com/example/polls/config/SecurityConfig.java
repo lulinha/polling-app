@@ -73,7 +73,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/user/checkUsernameAvailability", "/api/user/checkEmailAvailability")
                         .permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/polls/**", "/api/users/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/polls/**", "/api/users/**", "/api/favorites/**").permitAll()
                         .anyRequest().authenticated());
 
         http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
