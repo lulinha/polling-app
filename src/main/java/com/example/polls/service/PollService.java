@@ -526,7 +526,7 @@ public class PollService {
         }
 
         // 添加获取热门投票的方法
-        public PagedResponse<PollResponse> getHotPolls(UserPrincipal currentUser) {
+        public PagedResponse<PollResponse> getHotPolls() {
                 // 获取热门投票ID（Redis ZSET）
                 Set<Long> pollIds = getHotPollIdsFromCache();
 

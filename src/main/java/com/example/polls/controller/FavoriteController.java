@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.polls.payload.PollResponse;
+import com.example.polls.security.CurrentUser;
+import com.example.polls.security.UserPrincipal;
 import com.example.polls.service.FavoriteService;
 
 @RestController
@@ -25,15 +27,15 @@ public class FavoriteController {
 
     @PostMapping("/{pollId}")
     @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<?> toggleFavorite(@PathVariable Long pollId) {
-        favoriteService.toggleFavorite(pollId);
+    public ResponseEntity<?> toggleFavorite(@CurrentUser UserPrincipal currentUser, @PathVariable Long pollId) {
+        favoriteService.toggleFavorite(currentUser, pollId);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping
     @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<Page<PollResponse>> getFavorites(
+    public ResponseEntity<Page<PollResponse>> getFavorites(@CurrentUser UserPrincipal currentUser, 
             @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        return ResponseEntity.ok(favoriteService.getUserFavorites(pageable));
+        return ResponseEntity.ok(favoriteService.getUserFavorites(currentUser, pageable));
     }
 }

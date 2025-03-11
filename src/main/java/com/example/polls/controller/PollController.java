@@ -80,9 +80,8 @@ public class PollController {
     }
 
     @GetMapping("/hot")
-    public PagedResponse<PollResponse> getHotPolls(
-            @CurrentUser UserPrincipal currentUser) {
-        return pollService.getHotPolls(currentUser);
+    public PagedResponse<PollResponse> getHotPolls() {
+        return pollService.getHotPolls();
     }
 
     @PutMapping("/{pollId}/approve")

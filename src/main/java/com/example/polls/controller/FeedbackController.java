@@ -1,9 +1,9 @@
 package com.example.polls.controller;
 
-import com.example.polls.model.UserFeedback;
+import com.example.polls.model.Feedback;
 import com.example.polls.payload.FeedbackRequest;
 import com.example.polls.payload.FeedbackResponse;
-import com.example.polls.service.UserFeedbackService;
+import com.example.polls.service.FeedbackService;
 import com.example.polls.security.CurrentUser;
 import com.example.polls.security.UserPrincipal;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,15 +11,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
 import java.util.List;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/feedback")
-public class UserFeedbackController {
+public class FeedbackController {
 
     @Autowired
-    private UserFeedbackService userFeedbackService;
+    private FeedbackService userFeedbackService;
 
     @PostMapping
     public ResponseEntity<?> submitFeedback(@CurrentUser UserPrincipal currentUser,
@@ -30,7 +30,7 @@ public class UserFeedbackController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public List<UserFeedback> getAllFeedbacks() {
+    public List<Feedback> getAllFeedbacks() {
         return userFeedbackService.getAllFeedbacks();
     }
 

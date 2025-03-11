@@ -6,8 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -61,18 +59,13 @@ public class UserService {
             throw new AuthenticationCredentialsNotFoundException("用户未登录");
         }
 
-        // 根据认证主体类型处理不同情况
-        Object principal = authentication.getPrincipal();
+        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
         
-        if (principal instanceof UserDetails) { // JWT 或 Spring Security UserDetails
-            return (User) principal;
-        } else if (principal instanceof String) { // 用户名作为 principal
-            String username = (String) principal;
-            return userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("用户不存在: " + username));
-        }
+        User user = userRepository.findById(userPrincipal.getId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User with id " + userPrincipal.getId() + " not found"));
 
-        throw new IllegalStateException("无法识别的用户凭证类型");
+        return user;
     }
 
     public UserIdentityAvailability checkUsernameAvailability(String username) {
