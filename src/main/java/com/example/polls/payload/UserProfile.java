@@ -15,6 +15,11 @@ public class UserProfile {
     public UserProfile() {
     }
 
+    public UserProfile(Long id, String username) {
+        this.id = id;
+        this.username = username;
+    }
+
     public UserProfile(Long id, String username, String name, Instant joinedAt, Long pollCount, Long voteCount,
             int points, int level) {
         this.id = id;

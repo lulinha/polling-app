@@ -9,15 +9,18 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.polls.dto.ChoiceDTO;
 import com.example.polls.dto.PollDTO;
+import com.example.polls.model.Comment;
 import com.example.polls.model.Poll;
 import com.example.polls.model.User;
 import com.example.polls.payload.ChoiceResponse;
+import com.example.polls.payload.CommentResponse;
 import com.example.polls.payload.PollResponse;
 import com.example.polls.payload.UserSummary;
 
 public class ModelMapper {
 
-    // 处理 getReferenceById() 的延迟加载, 如果 ModelMapper.mapPollToPollResponse 中需要访问用户详细信息（如用户名、邮箱），
+    // 处理 getReferenceById() 的延迟加载, 如果 ModelMapper.mapPollToPollResponse
+    // 中需要访问用户详细信息（如用户名、邮箱），
     // 需确保在事务上下文中使用 @Transactional 注解，否则可能触发 LazyInitializationException：
     @Transactional(readOnly = true)
     public static PollResponse mapPollToPollResponse(Poll poll, Map<Long, Long> choiceVotesMap, User creator,
@@ -74,6 +77,19 @@ public class ModelMapper {
         dto.setChoices(choiceDTOs);
 
         return dto;
+    }
+
+    public CommentResponse toResponse(Comment comment) {
+        return new CommentResponse(
+                comment.getId(),
+                comment.getContent(),
+                comment.getUser().getUsername(),
+                comment.getCreatedAt(),
+                comment.getLikeCount(),
+                comment.getParent() != null ? comment.getParent().getId() : null,
+                comment.getReplies().stream()
+                .map(this::toResponse)
+                .toList());
     }
 
 }

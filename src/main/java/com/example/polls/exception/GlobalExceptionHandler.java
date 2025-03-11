@@ -41,6 +41,12 @@ public class GlobalExceptionHandler {
                 return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
         }
 
+        @ExceptionHandler(ConflictException.class)
+        public ResponseEntity<?> handleConflict(RuntimeException ex) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                                .body(Map.of("error", ex.getMessage()));
+        }
+
         /**
          * 处理参数校验异常（@Valid失败）
          */
@@ -92,7 +98,7 @@ public class GlobalExceptionHandler {
                         ResourceNotFoundException ex, HttpServletRequest request) {
 
                 logger.error("ResourceNotFoundException: {}, Request Method: {}, Request URI: {}", ex.getMessage(),
-                request.getMethod(), request.getRequestURI(), ex);
+                                request.getMethod(), request.getRequestURI(), ex);
 
                 return buildErrorResponse(
                                 HttpStatus.NOT_FOUND,
@@ -127,7 +133,7 @@ public class GlobalExceptionHandler {
                         AppException ex, HttpServletRequest request) {
 
                 logger.error("AppException: {}, Request Method: {}, Request URI: {}", ex.getMessage(),
-                request.getMethod(), request.getRequestURI(), ex);
+                                request.getMethod(), request.getRequestURI(), ex);
 
                 return buildErrorResponse(
                                 HttpStatus.INTERNAL_SERVER_ERROR,
@@ -144,7 +150,7 @@ public class GlobalExceptionHandler {
         public ErrorResponse handleAllExceptions(Exception ex, HttpServletRequest request) {
 
                 logger.error("Unexpected exception: {}, Request Method: {}, Request URI: {}", ex.getMessage(),
-                request.getMethod(), request.getRequestURI(), ex);
+                                request.getMethod(), request.getRequestURI(), ex);
 
                 String message = isProduction() ? "服务器内部错误" : ex.getMessage();
 

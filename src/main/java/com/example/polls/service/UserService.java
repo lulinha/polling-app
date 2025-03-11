@@ -3,7 +3,11 @@ package com.example.polls.service;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.polls.exception.ResourceNotFoundException;
 import com.example.polls.model.User;
@@ -44,6 +48,24 @@ public class UserService {
 
     public UserSummary getCurrentUser(UserPrincipal currentUser) {
         return new UserSummary(currentUser.getId(), currentUser.getUsername(), currentUser.getName());
+    }
+
+     // 核心方法：获取当前认证用户
+    @Transactional(readOnly = true)
+    public User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new AuthenticationCredentialsNotFoundException("用户未登录");
+        }
+
+        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
+        
+        User user = userRepository.findById(userPrincipal.getId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User with id " + userPrincipal.getId() + " not found"));
+
+        return user;
     }
 
     public UserIdentityAvailability checkUsernameAvailability(String username) {

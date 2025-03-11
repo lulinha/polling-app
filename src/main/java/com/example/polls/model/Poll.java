@@ -2,7 +2,9 @@ package com.example.polls.model;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.Fetch;
@@ -17,6 +19,9 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
@@ -45,6 +50,25 @@ public class Poll extends UserDateAudit {
 
     @Column(name = "approved")
     private boolean isApproved; // 新增审核状态字段
+
+    // 与 Category 的多对多关系
+    @ManyToMany
+    @JoinTable(name = "poll_categories", joinColumns = @JoinColumn(name = "poll_id"), inverseJoinColumns = @JoinColumn(name = "category_id"))
+    private Set<Category> categories = new HashSet<>();
+
+    // 与 Tag 的多对多关系
+    @ManyToMany
+    @JoinTable(name = "poll_tags", joinColumns = @JoinColumn(name = "poll_id"), inverseJoinColumns = @JoinColumn(name = "tag_id"))
+    private Set<Tag> tags = new HashSet<>();
+
+    // 添加 getter 和 setter
+    public Set<Category> getCategories() {
+        return categories;
+    }
+
+    public void setCategories(Set<Category> categories) {
+        this.categories = categories;
+    }
 
     public Long getId() {
         return id;
@@ -94,6 +118,14 @@ public class Poll extends UserDateAudit {
 
     public void setApproved(boolean approved) {
         isApproved = approved;
+    }
+
+    public Set<Tag> getTags() {
+        return tags;
+    }
+
+    public void setTags(Set<Tag> tags) {
+        this.tags = tags;
     }
 
 }

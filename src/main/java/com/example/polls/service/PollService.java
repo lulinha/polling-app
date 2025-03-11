@@ -31,15 +31,19 @@ import com.example.polls.constants.RedisConstants;
 import com.example.polls.dto.PollDTO;
 import com.example.polls.exception.BadRequestException;
 import com.example.polls.exception.ResourceNotFoundException;
+import com.example.polls.model.Category;
 import com.example.polls.model.Choice;
 import com.example.polls.model.ChoiceVoteCount;
 import com.example.polls.model.Poll;
+import com.example.polls.model.Tag;
 import com.example.polls.model.User;
 import com.example.polls.model.Vote;
 import com.example.polls.payload.PagedResponse;
 import com.example.polls.payload.PollRequest;
 import com.example.polls.payload.PollResponse;
+import com.example.polls.repository.CategoryRepository;
 import com.example.polls.repository.PollRepository;
+import com.example.polls.repository.TagRepository;
 import com.example.polls.repository.UserRepository;
 import com.example.polls.repository.VoteRepository;
 import com.example.polls.security.UserPrincipal;
@@ -66,6 +70,12 @@ public class PollService {
 
         @Autowired
         private NotificationService notificationService;
+
+        @Autowired
+        private CategoryRepository categoryRepository;
+
+        @Autowired
+        private TagRepository tagRepository;
 
         @Autowired
         private RedisTemplate<String, Object> redisTemplate;
@@ -241,6 +251,43 @@ public class PollService {
                                 .plus(Duration.ofHours(pollRequest.getPollLength().getHours()));
 
                 poll.setExpirationDateTime(expirationDateTime);
+                // 处理分类
+                Set<Category> categories = pollRequest.getCategoryIds().stream()
+                                .map(categoryRepository::findById) // 转换为 Optional<Category> 流
+                                .filter(Optional::isPresent) // 过滤空 Optional
+                                .map(Optional::get) // 解包 Category 对象
+                                .collect(Collectors.toSet()); // 收集为 Set
+
+                // 最佳实践：使用 flatMap 处理 Optional
+                /*
+                 * Set<Category> categories = pollRequest.getCategoryIds().stream()
+                 * .flatMap(id -> categoryRepository.findById(id).stream())
+                 * .collect(Collectors.toSet());
+                 */
+                poll.setCategories(categories);
+
+                // 处理标签
+                Set<Tag> tags = pollRequest.getTagNames().stream()
+                                .map(tagRepository::findByName) // 转换为 Optional<Tag> 流
+                                .filter(Optional::isPresent)
+                                .map(Optional::get)
+                                .collect(Collectors.toSet());
+
+                /*
+                 * 扩展功能建议： （如果需要自动创建不存在的标签）
+                 * Set<Tag> tags = pollRequest.getTagNames().stream()
+                 * .map(name -> tagRepository.findByName(name)
+                 * .orElseGet(() -> tagRepository.save(new Tag(name)))
+                 * .collect(Collectors.toSet());
+                 */
+
+                /*
+                 * 最佳实践：使用 flatMap 处理 Optional
+                 * Set<Tag> tags = pollRequest.getTagNames().stream()
+                 * .flatMap(name -> tagRepository.findByName(name).stream())
+                 * .collect(Collectors.toSet());
+                 */
+                poll.setTags(tags);
 
                 // 保存投票
                 Poll savedPoll = pollRepository.save(poll);
@@ -277,6 +324,21 @@ public class PollService {
                                 .plus(Duration.ofHours(pollRequest.getPollLength().getHours()));
 
                 poll.setExpirationDateTime(expirationDateTime);
+                // 处理分类
+                Set<Category> categories = pollRequest.getCategoryIds().stream()
+                                .map(categoryRepository::findById) // 转换为 Optional<Category> 流
+                                .filter(Optional::isPresent) // 过滤空 Optional
+                                .map(Optional::get) // 解包 Category 对象
+                                .collect(Collectors.toSet()); // 收集为 Set
+                poll.setCategories(categories);
+
+                // 处理标签
+                Set<Tag> tags = pollRequest.getTagNames().stream()
+                                .map(tagRepository::findByName) // 转换为 Optional<Tag> 流
+                                .filter(Optional::isPresent)
+                                .map(Optional::get)
+                                .collect(Collectors.toSet());
+                poll.setTags(tags);
 
                 // 保存投票
                 Poll savedPoll = pollRepository.save(poll);
@@ -464,7 +526,7 @@ public class PollService {
         }
 
         // 添加获取热门投票的方法
-        public PagedResponse<PollResponse> getHotPolls(UserPrincipal currentUser) {
+        public PagedResponse<PollResponse> getHotPolls() {
                 // 获取热门投票ID（Redis ZSET）
                 Set<Long> pollIds = getHotPollIdsFromCache();
 
